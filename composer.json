@@ -1,0 +1,51 @@
+{
+    "name": "zeeshantariq/filament-sticky-columns",
+    "description": "Sticky / frozen table columns for Filament v3, v4, and v5",
+    "type": "library",
+    "keywords": ["filament", "laravel", "sticky", "frozen", "table", "columns", "pinned"],
+    "homepage": "https://github.com/zeeshantariq/filament-sticky-columns",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Zeeshan Tariq",
+            "email": "zeeshan@example.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "filament/filament": "^3.0 || ^4.0 || ^5.0",
+        "filament/tables": "^3.0 || ^4.0 || ^5.0",
+        "spatie/laravel-package-tools": "^1.16"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0 || ^9.0",
+        "pestphp/pest": "^2.0 || ^3.0",
+        "pestphp/pest-plugin-laravel": "^2.0 || ^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "ZeeshanTariq\\FilamentStickyColumns\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ZeeshanTariq\\FilamentStickyColumns\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/pest"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "ZeeshanTariq\\FilamentStickyColumns\\FilamentStickyColumnsServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

@@ -1,0 +1,85 @@
+/**
+ * filament-sticky-columns.css
+ * zeeshantariq/filament-sticky-columns
+ *
+ * Companion styles for the JS engine.
+ * Uses Filament CSS custom properties — works in light AND dark mode.
+ */
+
+/* ── Table wrapper must scroll horizontally ───────────────────────────────── */
+.fi-ta-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Every sticky cell ────────────────────────────────────────────────────── */
+[data-sticky-applied] {
+  /* JS handles position / offset / z-index */
+  transition: box-shadow 150ms ease, background-color 150ms ease;
+
+  /* Fix Safari sub-pixel rendering bug */
+  -webkit-transform: translateZ(0);
+          transform: translateZ(0);
+}
+
+/* ── Shadows — only visible after the user scrolls ───────────────────────── */
+
+/* Left-sticky: shadow on the RIGHT edge */
+[data-sticky-applied="left"] {
+  box-shadow: none;
+}
+[data-sticky-applied="left"].sticky-shadow-active {
+  box-shadow: 4px 0 8px -2px var(--sticky-shadow-color, rgba(0, 0, 0, 0.12));
+}
+
+/* Right-sticky: shadow on the LEFT edge */
+[data-sticky-applied="right"] {
+  box-shadow: none;
+}
+[data-sticky-applied="right"].sticky-shadow-active {
+  box-shadow: -4px 0 8px -2px var(--sticky-shadow-color, rgba(0, 0, 0, 0.12));
+}
+
+/* ── Dark-mode shadow override ────────────────────────────────────────────── */
+.dark [data-sticky-applied="left"].sticky-shadow-active,
+.dark [data-sticky-applied="right"].sticky-shadow-active {
+  --sticky-shadow-color: rgba(0, 0, 0, 0.45);
+}
+
+/* ── Header cells sit above body cells ───────────────────────────────────── */
+thead [data-sticky-applied] {
+  z-index: 20 !important;
+}
+
+/* ── Surface / background colours ────────────────────────────────────────── */
+
+/* Light mode — Filament v3/v4/v5 all expose --body-bg or similar vars */
+[data-sticky-applied] {
+  background-color: var(--fi-color-bg, var(--body-bg, rgb(249 250 251)));
+}
+
+/* Dark mode */
+.dark [data-sticky-applied] {
+  background-color: var(--fi-color-bg, var(--body-bg, rgb(17 24 39)));
+}
+
+/* ── Row states: hover and selected must still be visible ─────────────────── */
+tr:hover [data-sticky-applied] {
+  background-color: inherit;
+}
+
+tr.fi-selected [data-sticky-applied],
+tr[wire\:key].fi-selected [data-sticky-applied] {
+  background-color: inherit;
+}
+
+/* ── Striped tables (if the panel enables them) ───────────────────────────── */
+tr:nth-child(even) [data-sticky-applied] {
+  background-color: inherit;
+}
+
+/* ── Prevent content bleed on sticky cell borders ────────────────────────── */
+[data-sticky-applied] {
+  border-right-width: inherit;
+  border-left-width: inherit;
+}
