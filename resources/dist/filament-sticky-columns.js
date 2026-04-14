@@ -167,6 +167,128 @@
   }
 
   /**
+   * Parse rgb()/rgba() including modern space-separated `rgb(r g b)`.
+   * Returns { r, g, b, a } with alpha in 0..1.
+   */
+  function parseRgbaLayer(color) {
+    if (!color) return null;
+    const c = color.trim().toLowerCase();
+    if (c === 'transparent') return { r: 0, g: 0, b: 0, a: 0 };
+
+    let m = c.match(/rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([0-9.]+)\s*\)/);
+    if (m) {
+      return {
+        r: Number(m[1]),
+        g: Number(m[2]),
+        b: Number(m[3]),
+        a: Number(m[4]),
+      };
+    }
+
+    m = c.match(/rgba\(\s*(\d+)\s+(\d+)\s+(\d+)\s*\/\s*([0-9.]+)\s*\)/);
+    if (m) {
+      return {
+        r: Number(m[1]),
+        g: Number(m[2]),
+        b: Number(m[3]),
+        a: Number(m[4]),
+      };
+    }
+
+    m = c.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/);
+    if (m) return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]), a: 1 };
+
+    m = c.match(/^rgb\(\s*(\d+)\s+(\d+)\s+(\d+)\s*\)$/);
+    if (m) return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]), a: 1 };
+
+    m = c.match(/^rgb\(\s*(\d+)\s+(\d+)\s+(\d+)\s*\/\s*([0-9.]+)\s*\)$/);
+    if (m) {
+      return {
+        r: Number(m[1]),
+        g: Number(m[2]),
+        b: Number(m[3]),
+        a: Number(m[4]),
+      };
+    }
+
+    return null;
+  }
+
+  function rgbLayerToCss({ r, g, b }) {
+    return `rgb(${r} ${g} ${b})`;
+  }
+
+  /** Composite translucent `top` over opaque `bottom` (simple α blending). */
+  function blendTopOverBottom(bottomRgb, topLayer) {
+    const a = topLayer.a;
+    return {
+      r: Math.round(topLayer.r * a + bottomRgb.r * (1 - a)),
+      g: Math.round(topLayer.g * a + bottomRgb.g * (1 - a)),
+      b: Math.round(topLayer.b * a + bottomRgb.b * (1 - a)),
+    };
+  }
+
+  /**
+   * First opaque rgb background walking up from `start` (for under a translucent panel).
+   */
+  function findFirstOpaqueParentRgb(start, isDark) {
+    let el = start;
+    while (el) {
+      const bg = getComputedStyle(el).backgroundColor;
+      if (isOpaque(bg)) {
+        const layer = parseRgbaLayer(bg);
+        if (
+          layer &&
+          layer.a >= 1 &&
+          !isNearWhite(bg, isDark) &&
+          !isNearFlatBlack(bg, isDark)
+        ) {
+          return { r: layer.r, g: layer.g, b: layer.b };
+        }
+      }
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  /**
+   * Filament / custom themes often set translucent surfaces on `.fi-ta-ctn` etc.
+   * Blend those over the real opaque canvas so sticky cells match the UI.
+   */
+  function resolveThemedSurface(cell, isDark) {
+    const anchors = [
+      () => cell.closest('.fi-ta-ctn'),
+      () => cell.closest('.fi-ta-content'),
+      () => cell.closest('.fi-main'),
+      () => document.querySelector('.fi-main'),
+    ];
+
+    for (const pick of anchors) {
+      const anchor = pick();
+      if (!anchor || !anchor.isConnected) continue;
+
+      const bg = getComputedStyle(anchor).backgroundColor;
+      const layer = parseRgbaLayer(bg);
+      if (!layer || layer.a <= 0) continue;
+
+      if (layer.a >= 1) {
+        if (!isNearWhite(bg, isDark) && !isNearFlatBlack(bg, isDark)) return bg;
+        continue;
+      }
+
+      const bottom = findFirstOpaqueParentRgb(anchor.parentElement, isDark);
+      if (bottom) {
+        const blended = rgbLayerToCss(blendTopOverBottom(bottom, layer));
+        if (isNearFlatBlack(blended, isDark)) return filamentDarkSurfaceFallback();
+        return blended;
+      }
+      if (isDark) return filamentDarkSurfaceFallback();
+    }
+
+    return null;
+  }
+
+  /**
    * Resolve an opaque background colour for a sticky cell so content
    * scrolling beneath does not bleed through.
    */
@@ -175,31 +297,34 @@
 
     // 1. Cell's own background if already opaque (but avoid near-white in dark mode)
     const own = getComputedStyle(cell).backgroundColor;
-    if (isOpaque(own) && !isNearWhite(own, isDark)) return own;
+    if (isOpaque(own) && !isNearWhite(own, isDark) && !isNearFlatBlack(own, isDark)) return own;
 
     // 1b. Table / wrapper background
     const table = cell.closest('table');
     if (table) {
       const tbg = getComputedStyle(table).backgroundColor;
-      if (isOpaque(tbg) && !isNearWhite(tbg, isDark)) return tbg;
+      if (isOpaque(tbg) && !isNearWhite(tbg, isDark) && !isNearFlatBlack(tbg, isDark)) return tbg;
     }
 
     const wrapper = cell.closest('.fi-ta-table-wrapper') || cell.closest('[data-sticky-wrapper]');
     if (wrapper) {
       const wbg = getComputedStyle(wrapper).backgroundColor;
-      if (isOpaque(wbg) && !isNearWhite(wbg, isDark)) return wbg;
+      if (isOpaque(wbg) && !isNearWhite(wbg, isDark) && !isNearFlatBlack(wbg, isDark)) return wbg;
     }
 
-    // 2. Walk up the DOM tree
+    const themed = resolveThemedSurface(cell, isDark);
+    if (themed) return themed;
+
+    // 2. Walk up the DOM tree (through body / html — Filament paints there too)
     let el = cell.parentElement;
-    while (el && el !== document.body) {
+    while (el) {
       const bg = getComputedStyle(el).backgroundColor;
-      if (isOpaque(bg) && !isNearWhite(bg, isDark)) return bg;
+      if (isOpaque(bg) && !isNearWhite(bg, isDark) && !isNearFlatBlack(bg, isDark)) return bg;
       el = el.parentElement;
     }
 
-    // 3. CSS variable fallbacks (prefer Filament vars, then body vars)
-    return 'var(--fi-body-bg, var(--fi-color-bg, var(--body-bg, rgb(17 24 39))))';
+    // 3. Filament panel primary palette (--primary-* are injected from FilamentColor)
+    return 'var(--sticky-theme-surface, ' + filamentDarkSurfaceFallback() + ')';
   }
 
   function isNearWhite(color, isDark) {
@@ -209,10 +334,35 @@
     return rgb.r >= 235 && rgb.g >= 235 && rgb.b >= 235;
   }
 
+  /**
+   * Skip neutral charcoal / zinc blacks from ancestors (channels almost equal).
+   * Do not treat cool blue-gray (e.g. marketing gray-900 17,24,39) as flat black.
+   */
+  function isNearFlatBlack(color, isDark) {
+    if (!isDark) return false;
+    const rgb = parseRgb(color);
+    if (!rgb) return false;
+    const { r, g, b } = rgb;
+    const mx = Math.max(r, g, b);
+    const mn = Math.min(r, g, b);
+    if (mx > 56) return false;
+    return mx - mn <= 12;
+  }
+
+  /**
+   * Cool blue-gray used on Filament’s own marketing/docs dark UI (Tailwind neutral gray-900, ~#111827).
+   * Panel `--gray-*` CSS vars are often zinc; this matches the public site background tone.
+   */
+  function filamentDarkSurfaceFallback() {
+    return 'rgb(17 24 39)';
+  }
+
   function parseRgb(color) {
     if (!color) return null;
     const c = color.trim().toLowerCase();
     let m = c.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/);
+    if (m) return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]) };
+    m = c.match(/^rgb\(\s*(\d+)\s+(\d+)\s+(\d+)\s*\)$/);
     if (m) return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]) };
     m = c.match(/rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([0-9.]+)\s*\)/);
     if (m) {
@@ -245,12 +395,13 @@
     const c = color.trim().toLowerCase();
     if (c === 'transparent') return false;
 
-    // rgb(...) is always opaque
+    // rgb(...) is always opaque (comma or space syntax)
     if (c.startsWith('rgb(')) return true;
 
-    // rgba(r,g,b,a)
+    // rgba(r,g,b,a) or rgba(r g b / a)
     if (c.startsWith('rgba(')) {
-      const m = c.match(/rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*([0-9.]+)\s*\)/);
+      let m = c.match(/rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*([0-9.]+)\s*\)/);
+      if (!m) m = c.match(/rgba\(\s*\d+\s+\d+\s+\d+\s*\/\s*([0-9.]+)\s*\)/);
       if (!m) return false;
       const a = Number(m[1]);
       return Number.isFinite(a) && a >= 1;
