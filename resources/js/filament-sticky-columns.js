@@ -33,6 +33,31 @@
     return null;
   }
 
+  function getIsDark() {
+    const root = document.documentElement;
+    const body = document.body;
+    return (
+      (root && root.classList.contains('dark')) ||
+      (body && body.classList.contains('dark'))
+    );
+  }
+
+  /**
+   * Clear presentation we set on a previous run so getComputedStyle / theme
+   * resolution is not poisoned by stale inline colours after light/dark toggle.
+   */
+  function resetStickyPresentation() {
+    document.querySelectorAll(`[${APPLIED_ATTR}]`).forEach((el) => {
+      el.removeAttribute(APPLIED_ATTR);
+      el.style.position = '';
+      el.style.left = '';
+      el.style.right = '';
+      el.style.zIndex = '';
+      el.style.backgroundColor = '';
+      el.style.boxShadow = '';
+    });
+  }
+
   function applyStickyColumns() {
     document.querySelectorAll('table').forEach((table) => {
       // Filament may apply column attributes to <td> but not <th>,
@@ -146,65 +171,184 @@
    * scrolling beneath does not bleed through.
    */
   function resolveBackground(cell) {
-    // 1. Cell's own background if already opaque
+    const isDark = getIsDark();
+
+    // 1. Cell's own background if already opaque (but avoid near-white in dark mode)
     const own = getComputedStyle(cell).backgroundColor;
-    if (isOpaque(own)) return own;
+    if (isOpaque(own) && !isNearWhite(own, isDark)) return own;
+
+    // 1b. Table / wrapper background
+    const table = cell.closest('table');
+    if (table) {
+      const tbg = getComputedStyle(table).backgroundColor;
+      if (isOpaque(tbg) && !isNearWhite(tbg, isDark)) return tbg;
+    }
+
+    const wrapper = cell.closest('.fi-ta-table-wrapper') || cell.closest('[data-sticky-wrapper]');
+    if (wrapper) {
+      const wbg = getComputedStyle(wrapper).backgroundColor;
+      if (isOpaque(wbg) && !isNearWhite(wbg, isDark)) return wbg;
+    }
 
     // 2. Walk up the DOM tree
     let el = cell.parentElement;
     while (el && el !== document.body) {
       const bg = getComputedStyle(el).backgroundColor;
-      if (isOpaque(bg)) return bg;
+      if (isOpaque(bg) && !isNearWhite(bg, isDark)) return bg;
       el = el.parentElement;
     }
 
-    // 3. Filament panel CSS custom property fallback
-    return 'var(--body-bg, #ffffff)';
+    // 3. CSS variable fallbacks (prefer Filament vars, then body vars)
+    return 'var(--fi-body-bg, var(--fi-color-bg, var(--body-bg, rgb(17 24 39))))';
+  }
+
+  function isNearWhite(color, isDark) {
+    if (!isDark) return false;
+    const rgb = parseRgb(color);
+    if (!rgb) return false;
+    return rgb.r >= 235 && rgb.g >= 235 && rgb.b >= 235;
+  }
+
+  function parseRgb(color) {
+    if (!color) return null;
+    const c = color.trim().toLowerCase();
+    let m = c.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/);
+    if (m) return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]) };
+    m = c.match(/rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([0-9.]+)\s*\)/);
+    if (m) {
+      const a = Number(m[4]);
+      if (!Number.isFinite(a) || a <= 0) return null;
+      return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]) };
+    }
+    if (c.startsWith('#')) {
+      if (c.length === 4) {
+        return {
+          r: parseInt(c[1] + c[1], 16),
+          g: parseInt(c[2] + c[2], 16),
+          b: parseInt(c[3] + c[3], 16),
+        };
+      }
+      if (c.length === 7 || c.length === 9) {
+        return {
+          r: parseInt(c.slice(1, 3), 16),
+          g: parseInt(c.slice(3, 5), 16),
+          b: parseInt(c.slice(5, 7), 16),
+        };
+      }
+    }
+    return null;
   }
 
   function isOpaque(color) {
-    return (
-      color &&
-      color !== 'rgba(0, 0, 0, 0)' &&
-      color !== 'transparent' &&
-      !color.startsWith('rgba(0, 0, 0, 0)')
-    );
+    if (!color) return false;
+
+    const c = color.trim().toLowerCase();
+    if (c === 'transparent') return false;
+
+    // rgb(...) is always opaque
+    if (c.startsWith('rgb(')) return true;
+
+    // rgba(r,g,b,a)
+    if (c.startsWith('rgba(')) {
+      const m = c.match(/rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*([0-9.]+)\s*\)/);
+      if (!m) return false;
+      const a = Number(m[1]);
+      return Number.isFinite(a) && a >= 1;
+    }
+
+    // hsl/hsla
+    if (c.startsWith('hsla(')) {
+      const m = c.match(/hsla\(.+?,\s*([0-9.]+)\s*\)/);
+      if (!m) return false;
+      const a = Number(m[1]);
+      return Number.isFinite(a) && a >= 1;
+    }
+    if (c.startsWith('hsl(')) return true;
+
+    // hex colors are opaque
+    if (c.startsWith('#')) {
+      // #rgb, #rrggbb are opaque; #rgba / #rrggbbaa depend on alpha
+      if (c.length === 4 || c.length === 7) return true;
+      if (c.length === 5) return c[4] === 'f';
+      if (c.length === 9) return c.slice(7, 9) === 'ff';
+    }
+
+    // Unknown formats: assume not opaque so we keep searching.
+    return false;
   }
 
   // ─── Scroll shadows ─────────────────────────────────────────────────────────
+
+  function updateWrapperScrollShadows(wrapper) {
+    const atLeft  = wrapper.scrollLeft <= 1;
+    const atRight =
+      wrapper.scrollLeft >= wrapper.scrollWidth - wrapper.clientWidth - 1;
+
+    wrapper
+      .querySelectorAll(`[${APPLIED_ATTR}="left"]`)
+      .forEach((el) => el.classList.toggle('sticky-shadow-active', !atLeft));
+
+    wrapper
+      .querySelectorAll(`[${APPLIED_ATTR}="right"]`)
+      .forEach((el) => el.classList.toggle('sticky-shadow-active', !atRight));
+  }
 
   function bindScrollShadows() {
     document
       .querySelectorAll('.fi-ta-table-wrapper, [data-sticky-wrapper]')
       .forEach((wrapper) => {
-        if (wrapper._stickyBound) return;
-        wrapper._stickyBound = true;
-
-        const update = () => {
-          const atLeft  = wrapper.scrollLeft <= 1;
-          const atRight =
-            wrapper.scrollLeft >= wrapper.scrollWidth - wrapper.clientWidth - 1;
-
-          wrapper
-            .querySelectorAll(`[${APPLIED_ATTR}="left"]`)
-            .forEach((el) => el.classList.toggle('sticky-shadow-active', !atLeft));
-
-          wrapper
-            .querySelectorAll(`[${APPLIED_ATTR}="right"]`)
-            .forEach((el) => el.classList.toggle('sticky-shadow-active', !atRight));
-        };
-
-        wrapper.addEventListener('scroll', update, { passive: true });
-        // Run once immediately to set correct initial state
-        update();
+        if (!wrapper._stickyBound) {
+          wrapper._stickyBound = true;
+          const update = () => updateWrapperScrollShadows(wrapper);
+          wrapper.addEventListener('scroll', update, { passive: true });
+        }
+        // Re-sync after DOM / sticky attrs change (e.g. theme toggle, Livewire morph)
+        updateWrapperScrollShadows(wrapper);
       });
   }
 
   // ─── Boot ───────────────────────────────────────────────────────────────────
 
   function boot() {
+    resetStickyPresentation();
     applyStickyColumns();
     bindScrollShadows();
+  }
+
+  // Re-apply when theme toggles (Filament toggles `dark` on <html> or <body>)
+  function bindThemeObserver() {
+    if (document.documentElement._stickyThemeObserverBound) return;
+    document.documentElement._stickyThemeObserverBound = true;
+
+    let lastIsDark = getIsDark();
+    const schedule = () => {
+      const isDark = getIsDark();
+      if (isDark === lastIsDark) return;
+      lastIsDark = isDark;
+      requestAnimationFrame(boot);
+    };
+
+    const observer = new MutationObserver(schedule);
+    observer.observe(document.documentElement, {
+      attributes     : true,
+      attributeFilter: ['class'],
+    });
+    if (document.body) {
+      observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    } else {
+      document.addEventListener('DOMContentLoaded', () => {
+        observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+      });
+    }
+
+    window.addEventListener('storage', (e) => {
+      if (!e.key) return;
+      if (!/theme/i.test(e.key)) return;
+      requestAnimationFrame(() => {
+        boot();
+        lastIsDark = getIsDark();
+      });
+    });
   }
 
   // ── Initial load ──────────────────────────────────────────────────────────
@@ -238,6 +382,9 @@
   // ── Alpine.js ─────────────────────────────────────────────────────────────
   document.addEventListener('alpine:initialized', boot);
   document.addEventListener('alpine:init',        boot);
+
+  // Theme toggles (dark/light)
+  bindThemeObserver();
 
   // ── Manual re-trigger ────────────────────────────────────────────────────
   window.FilamentStickyColumns = { refresh: boot };
