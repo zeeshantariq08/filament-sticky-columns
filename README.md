@@ -56,29 +56,6 @@ If you need to publish manually (or you updated the package locally), run:
 php artisan filament:assets
 ```
 
-### Local development (path repository)
-
-If you develop this package inside a Laravel app repo, add a Composer path repository in your app `composer.json`:
-
-```json
-{
-  "repositories": [
-    {
-      "type": "path",
-      "url": "packages/zeeshantariq/filament-sticky-columns",
-      "options": { "symlink": true }
-    }
-  ]
-}
-```
-
-Then require the package and install:
-
-```bash
-composer require zeeshantariq/filament-sticky-columns:"dev-main"
-php artisan filament:assets
-```
-
 ---
 
 ## Usage

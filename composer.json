@@ -7,9 +7,7 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "Zeeshan Tariq",
-            "email": "zeeshan@example.com",
-            "role": "Developer"
+            "name": "Zeeshan Tariq"
         }
     ],
     "require": {
