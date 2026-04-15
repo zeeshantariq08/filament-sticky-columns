@@ -26,6 +26,34 @@
 
   // ─── Core ───────────────────────────────────────────────────────────────────
 
+  /**
+   * Filament table wrappers differ between v3/v4/v5 and can be overridden in apps.
+   * Support common hook classes plus a user-supplied attribute.
+   */
+  function getPossibleTableWrappersSelector() {
+    // v3 commonly uses `.fi-ta-table-wrapper`
+    // v4/v5 can use `.fi-ta-content-ctn.fi-fixed-positioning-context` as the scroller
+    return [
+      '.fi-ta-table-wrapper',
+      '.fi-ta-content-ctn.fi-fixed-positioning-context',
+      '[data-sticky-wrapper]',
+    ].join(', ');
+  }
+
+  function findNearestHorizontalScrollParent(el) {
+    let cur = el?.parentElement ?? null;
+    while (cur && cur !== document.body) {
+      const cs = getComputedStyle(cur);
+      const canScrollX =
+        (cs.overflowX === 'auto' || cs.overflowX === 'scroll') &&
+        cur.scrollWidth > cur.clientWidth;
+
+      if (canScrollX) return cur;
+      cur = cur.parentElement;
+    }
+    return null;
+  }
+
   function getStickyDecl(cell) {
     if (!cell) return null;
     if (cell.hasAttribute && cell.hasAttribute(ATTR)) return cell;
@@ -63,6 +91,16 @@
       // Filament may apply column attributes to <td> but not <th>,
       // so we activate if *any* cell declares sticky.
       if (!table.querySelector(`[${ATTR}]`)) return;
+
+      // If Filament's wrapper hook classes are missing, fall back to the real scroll parent.
+      const existingWrapper =
+        table.closest(getPossibleTableWrappersSelector()) ||
+        table.querySelector(getPossibleTableWrappersSelector());
+
+      if (!existingWrapper) {
+        const scrollParent = findNearestHorizontalScrollParent(table);
+        if (scrollParent) scrollParent.setAttribute('data-sticky-wrapper', 'true');
+      }
 
       // Separate border model is required for sticky to work correctly
       table.style.borderCollapse = 'separate';
@@ -306,7 +344,10 @@
       if (isOpaque(tbg) && !isNearWhite(tbg, isDark) && !isNearFlatBlack(tbg, isDark)) return tbg;
     }
 
-    const wrapper = cell.closest('.fi-ta-table-wrapper') || cell.closest('[data-sticky-wrapper]');
+    const wrapper =
+      cell.closest('.fi-ta-table-wrapper') ||
+      cell.closest('.fi-ta-content-ctn.fi-fixed-positioning-context') ||
+      cell.closest('[data-sticky-wrapper]');
     if (wrapper) {
       const wbg = getComputedStyle(wrapper).backgroundColor;
       if (isOpaque(wbg) && !isNearWhite(wbg, isDark) && !isNearFlatBlack(wbg, isDark)) return wbg;
@@ -446,7 +487,7 @@
 
   function bindScrollShadows() {
     document
-      .querySelectorAll('.fi-ta-table-wrapper, [data-sticky-wrapper]')
+      .querySelectorAll(getPossibleTableWrappersSelector())
       .forEach((wrapper) => {
         if (!wrapper._stickyBound) {
           wrapper._stickyBound = true;

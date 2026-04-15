@@ -12,6 +12,18 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* Filament v4/v5 can use this hook class as the horizontal scroller */
+.fi-ta-content-ctn.fi-fixed-positioning-context {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Allow apps to mark their own scroll wrapper */
+[data-sticky-wrapper] {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* ── Every sticky cell ────────────────────────────────────────────────────── */
 [data-sticky-applied] {
   /* JS handles position / offset / z-index */

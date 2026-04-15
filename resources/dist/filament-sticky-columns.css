@@ -12,6 +12,18 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* Filament v4/v5 can use this hook class as the horizontal scroller */
+.fi-ta-content-ctn.fi-fixed-positioning-context {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Allow apps to mark their own scroll wrapper */
+[data-sticky-wrapper] {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* ── Every sticky cell ────────────────────────────────────────────────────── */
 [data-sticky-applied] {
   /* JS handles position / offset / z-index */
@@ -20,6 +32,13 @@
   /* Fix Safari sub-pixel rendering bug */
   -webkit-transform: translateZ(0);
           transform: translateZ(0);
+
+  /*
+   * Sticky cells stack above the next columns (z-index). Without clipping, long
+   * text can paint over neighbouring cells — e.g. last name "Black" over company.
+   */
+  overflow: hidden;
+  min-width: 0;
 }
 
 /* ── Shadows — only visible after the user scrolls ───────────────────────── */
@@ -58,9 +77,12 @@ thead [data-sticky-applied] {
   background-color: var(--fi-color-bg, var(--body-bg, rgb(249 250 251)));
 }
 
-/* Dark mode */
+/*
+ * Dark mode — same cool blue-gray as Filament’s marketing/docs dark UI (~#111827, neutral gray-900).
+ * Override with --sticky-theme-surface if your panel uses a different canvas.
+ */
 .dark [data-sticky-applied] {
-  background-color: var(--fi-color-bg, var(--body-bg, rgb(17 24 39)));
+  background-color: var(--sticky-theme-surface, rgb(17 24 39));
 }
 
 /* ── Row states: hover and selected must still be visible ─────────────────── */

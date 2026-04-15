@@ -9,6 +9,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+- Support Filament v4/v5 horizontal scroll wrapper `.fi-ta-content-ctn.fi-fixed-positioning-context` in addition to `.fi-ta-table-wrapper`.
+- Auto-detect the nearest horizontal scroll parent and mark it with `data-sticky-wrapper` when hook classes are missing.
+- Publishable `resources/dist/filament-sticky-columns.css` to ensure `php artisan filament:assets` works in consuming projects.
+
 ## [1.0.0] — 2025-04-11
 
 ### Added
