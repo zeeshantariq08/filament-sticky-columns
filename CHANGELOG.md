@@ -9,6 +9,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.0.4] — 2026-04-16
+
 ### Fixed
 - Support Filament v4/v5 horizontal scroll wrapper `.fi-ta-content-ctn.fi-fixed-positioning-context` in addition to `.fi-ta-table-wrapper`.
 - Auto-detect the nearest horizontal scroll parent and mark it with `data-sticky-wrapper` when hook classes are missing.
