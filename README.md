@@ -73,7 +73,7 @@ php artisan vendor:publish --tag="filament-sticky-columns-config"
 
 ### Publish assets (Filament assets pipeline)
 
-This package also registers JS/CSS via Filament assets (same approach as `filament-daterangepicker-filter`).
+This package also registers JS/CSS via Filament assets.
 
 Filament v3/v4 publish all registered assets with this command:
 
