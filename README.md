@@ -40,20 +40,43 @@ Pin one or more columns to the left or right edge while the rest of the table sc
 composer require zeeshantariq/filament-sticky-columns
 ```
 
+### Recommended (Vite) — no `filament:assets`, no hard refresh
+
+If your Filament panel uses a Vite theme (`->viteTheme(...)`), import the package CSS/JS into your theme build.
+This gives you automatic cache-busting (hashed filenames) and avoids running `php artisan filament:assets`.
+
+Add to your Filament theme CSS (example: `resources/css/filament/admin/theme.css`):
+
+```css
+@import "../../../../vendor/zeeshantariq/filament-sticky-columns/resources/css/filament-sticky-columns.css";
+```
+
+Import the JS in a file that is loaded by your panel (example: a Filament theme JS entry, or your panel JS bundle):
+
+```js
+import '../../../../vendor/zeeshantariq/filament-sticky-columns/resources/js/filament-sticky-columns.js'
+```
+
+Then rebuild your assets:
+
+```bash
+npm run dev
+# or
+npm run build
+```
+
 ### Publish config (optional)
 
 ```bash
 php artisan vendor:publish --tag="filament-sticky-columns-config"
 ```
 
-### Publish assets
+### Publish assets (Filament assets pipeline)
 
-This package registers JS/CSS via Filament assets. In most apps, Filament will publish them automatically during installs/upgrades.
-
-If you need to publish manually (or you updated the package locally), run:
+This package also registers JS/CSS via Filament assets. If you prefer this approach, publish only this package:
 
 ```bash
-php artisan filament:assets
+php artisan filament:assets --package=zeeshantariq/filament-sticky-columns
 ```
 
 ---
@@ -183,10 +206,11 @@ Checklist:
 - Make sure the assets are published:
 
 ```bash
-php artisan filament:assets
+php artisan filament:assets --package=zeeshantariq/filament-sticky-columns
 ```
 
-- Hard refresh the browser (especially after asset changes).
+- If you use the Filament assets pipeline, refresh once after publishing.
+- If you use Vite (recommended), you should not need hard refresh because Vite cache-busts.
 - Inspect the table DOM and confirm your sticky columns have `data-sticky="left"` / `data-sticky="right"` somewhere inside the cell.
 
 ### Offsets look wrong

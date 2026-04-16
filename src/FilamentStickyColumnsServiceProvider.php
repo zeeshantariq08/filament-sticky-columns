@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ZeeshanTariq\FilamentStickyColumns;
 
+use Composer\InstalledVersions;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
@@ -15,6 +16,7 @@ use Spatie\LaravelPackageTools\PackageServiceProvider;
 class FilamentStickyColumnsServiceProvider extends PackageServiceProvider
 {
     public static string $name = 'filament-sticky-columns';
+    private static string $version = 'dev';
 
     public function configurePackage(Package $package): void
     {
@@ -79,14 +81,17 @@ class FilamentStickyColumnsServiceProvider extends PackageServiceProvider
             });
         }
 
+        static::$version = InstalledVersions::getVersion('zeeshantariq/filament-sticky-columns') ?? 'dev';
+        $assetId = 'filament-sticky-columns' . static::$version;
+
         FilamentAsset::register(
             assets: [
                 Css::make(
-                    id: 'filament-sticky-columns',
+                    id: $assetId,
                     path: __DIR__ . '/../resources/dist/filament-sticky-columns.css',
                 ),
                 Js::make(
-                    id: 'filament-sticky-columns',
+                    id: $assetId,
                     path: __DIR__ . '/../resources/dist/filament-sticky-columns.js',
                 ),
             ],
