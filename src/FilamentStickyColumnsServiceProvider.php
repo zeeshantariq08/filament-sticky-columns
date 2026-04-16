@@ -12,7 +12,6 @@ use Filament\Tables\Columns\Column;
 use ReflectionMethod;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use ZeeshanTariq\FilamentStickyColumns\Commands\PublishStickyColumnsAssets;
 
 class FilamentStickyColumnsServiceProvider extends PackageServiceProvider
 {
@@ -24,8 +23,7 @@ class FilamentStickyColumnsServiceProvider extends PackageServiceProvider
         $package
             ->name(static::$name)
             ->hasConfigFile()
-            ->hasViews()
-            ->hasCommand(PublishStickyColumnsAssets::class);
+            ->hasViews();
     }
 
     public function packageBooted(): void

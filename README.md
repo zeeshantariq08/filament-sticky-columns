@@ -81,15 +81,6 @@ Filament v3/v4 publish all registered assets with this command:
 php artisan filament:assets
 ```
 
-### Publish only this package (optional)
-
-Some Filament versions do not support publishing a single package via `filament:assets`.
-This package includes a dedicated command that publishes **only** `filament-sticky-columns` assets:
-
-```bash
-php artisan filament-sticky-columns:assets
-```
-
 ---
 
 ## Usage
