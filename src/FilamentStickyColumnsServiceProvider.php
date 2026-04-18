@@ -48,11 +48,7 @@ class FilamentStickyColumnsServiceProvider extends PackageServiceProvider
                     $attrs['data-sticky-offset'] = $offset;
                 }
 
-                if ($supportsMerge) {
-                    $this->extraAttributes($attrs, true);
-                } else {
-                    $this->extraAttributes($attrs);
-                }
+                StickyAttributes::applyToColumn($this, $attrs, $supportsMerge);
 
                 return $this;
             });
@@ -71,11 +67,7 @@ class FilamentStickyColumnsServiceProvider extends PackageServiceProvider
                     $attrs['data-sticky-offset'] = $offset;
                 }
 
-                if ($supportsMerge) {
-                    $this->extraAttributes($attrs, true);
-                } else {
-                    $this->extraAttributes($attrs);
-                }
+                StickyAttributes::applyToColumn($this, $attrs, $supportsMerge);
 
                 return $this;
             });
@@ -106,8 +98,8 @@ class FilamentStickyColumnsServiceProvider extends PackageServiceProvider
     {
         if (class_exists(\Composer\InstalledVersions::class)) {
             $version = \Composer\InstalledVersions::getVersion('filament/filament');
-            if ($version !== null) {
-                return (int) $version[0];
+            if ($version !== null && preg_match('/^v?(\d+)/', $version, $matches)) {
+                return (int) $matches[1];
             }
         }
 

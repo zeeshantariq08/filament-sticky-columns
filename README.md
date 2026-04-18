@@ -211,6 +211,11 @@ Checklist:
 php artisan filament:assets
 ```
 
+- **Filament v4 note (important)**:
+  - Filament v4 renders table **cells** using `extraHeaderAttributes()` (`<th>`) and `extraCellAttributes()` (`<td>`).
+  - `extraAttributes()` is applied to **inner** column markup (e.g. `TextColumn`’s wrapper), which is not always enough for sticky positioning.
+  - When debugging, ensure you can see `data-sticky="left"` / `data-sticky="right"` on the actual `<th>` / `<td>` elements in your table (not only on a nested `<div>`).
+
 - If you use the Filament assets pipeline, refresh once after publishing.
 - If you use Vite (recommended), you should not need hard refresh because Vite cache-busts.
 - Inspect the table DOM and confirm your sticky columns have `data-sticky="left"` / `data-sticky="right"` somewhere inside the cell.

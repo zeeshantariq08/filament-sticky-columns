@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace ZeeshanTariq\FilamentStickyColumns\Concerns;
 
-use ZeeshanTariq\FilamentStickyColumns\FilamentStickyColumnsServiceProvider;
+use Filament\Tables\Columns\Column;
+use ReflectionMethod;
+use ZeeshanTariq\FilamentStickyColumns\StickyAttributes;
 
 trait HasStickyColumn
 {
@@ -108,8 +110,7 @@ trait HasStickyColumn
 
     /**
      * Inject data-* attributes so the JS engine can discover sticky columns.
-     * Uses merge: true (required from Filament v4+) so existing attributes
-     * are preserved.
+     * Uses the same merge detection as {@see FilamentStickyColumnsServiceProvider} macros.
      */
     protected function applyExtraAttributes(): void
     {
@@ -126,14 +127,11 @@ trait HasStickyColumn
             $attrs['data-sticky-offset'] = $this->stickyOffset;
         }
 
-        $filamentVersion = FilamentStickyColumnsServiceProvider::filamentMajorVersion();
-
-        if ($filamentVersion >= 4) {
-            // v4+ requires the merge parameter to avoid wiping other attributes
-            $this->extraAttributes($attrs, merge: true);
-        } else {
-            // v3 — merge parameter did not exist but the call is still safe
-            $this->extraAttributes($attrs);
+        $supportsMerge = false;
+        if (class_exists(Column::class) && method_exists(Column::class, 'extraAttributes')) {
+            $supportsMerge = (new ReflectionMethod(Column::class, 'extraAttributes'))->getNumberOfParameters() >= 2;
         }
+
+        StickyAttributes::applyToColumn($this, $attrs, $supportsMerge);
     }
 }
