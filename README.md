@@ -65,7 +65,7 @@ npm run dev
 npm run build
 ```
 
-### Publish config (optional)
+### Publish config
 
 ```bash
 php artisan vendor:publish --tag="filament-sticky-columns-config"
