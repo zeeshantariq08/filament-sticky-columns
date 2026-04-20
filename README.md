@@ -81,6 +81,8 @@ Filament v3/v4 publish all registered assets with this command:
 php artisan filament:assets
 ```
 
+**Cache busting (no hard refresh):** asset filenames include your installed package version and the built files’ last-modified time, so after `composer update` or a fresh install, run `php artisan filament:assets` (or rely on `filament:upgrade` in your app’s Composer scripts) and do a **normal** page reload — the browser should request new CSS/JS URLs automatically.
+
 ---
 
 ## Usage

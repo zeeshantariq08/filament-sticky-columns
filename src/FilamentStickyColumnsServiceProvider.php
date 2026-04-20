@@ -16,7 +16,6 @@ use Spatie\LaravelPackageTools\PackageServiceProvider;
 class FilamentStickyColumnsServiceProvider extends PackageServiceProvider
 {
     public static string $name = 'filament-sticky-columns';
-    private static string $version = 'dev';
 
     public function configurePackage(Package $package): void
     {
@@ -73,8 +72,7 @@ class FilamentStickyColumnsServiceProvider extends PackageServiceProvider
             });
         }
 
-        static::$version = InstalledVersions::getVersion('zeeshantariq/filament-sticky-columns') ?? 'dev';
-        $assetId = 'filament-sticky-columns' . static::$version;
+        $assetId = self::filamentAssetId();
 
         FilamentAsset::register(
             assets: [
@@ -89,6 +87,28 @@ class FilamentStickyColumnsServiceProvider extends PackageServiceProvider
             ],
             package: 'zeeshantariq/filament-sticky-columns',
         );
+    }
+
+    /**
+     * Stable Filament asset id used for public filenames. Includes the installed
+     * Composer version plus dist file mtimes so browsers fetch fresh CSS/JS after
+     * `composer update` / reinstall without relying on a hard refresh.
+     */
+    public static function filamentAssetId(): string
+    {
+        $distDir = dirname(__DIR__) . '/resources/dist';
+        $cssFile  = $distDir . '/filament-sticky-columns.css';
+        $jsFile   = $distDir . '/filament-sticky-columns.js';
+
+        $mtime = max(
+            is_file($cssFile) ? (int) filemtime($cssFile) : 0,
+            is_file($jsFile) ? (int) filemtime($jsFile) : 0,
+        );
+
+        $composerVersion = InstalledVersions::getVersion('zeeshantariq/filament-sticky-columns') ?? 'dev';
+        $safeVersion     = preg_replace('/[^0-9A-Za-z]/', '-', (string) $composerVersion) ?: 'dev';
+
+        return 'filament-sticky-columns-' . $safeVersion . '-' . (string) $mtime;
     }
 
     /**
