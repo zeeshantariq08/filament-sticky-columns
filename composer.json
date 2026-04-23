@@ -3,7 +3,7 @@
     "description": "Sticky / frozen table columns for Filament v3, v4, and v5",
     "type": "library",
     "keywords": ["filament", "laravel", "sticky", "frozen", "table", "columns", "pinned"],
-    "homepage": "https://github.com/zeeshantariq/filament-sticky-columns",
+    "homepage": "https://github.com/zeeshantariq08/filament-sticky-columns",
     "license": "MIT",
     "authors": [
         {
