@@ -153,9 +153,11 @@
     // Left pass — left to right
     cells.forEach((cell, idx) => {
       const decl = getStickyDecl(cell);
+      let number = idx;
+      if(cell.querySelector('.fi-ta-actions .fi-dropdown') === null) number = idx-1;
       if (decl?.getAttribute(ATTR) === 'left') {
         const manual = decl.getAttribute(ATTR_OFFSET);
-        map[idx] = {
+        map[number] = {
           position : 'left',
           offset   : manual !== null ? parseInt(manual, 10) : leftAcc,
           zIndex   : parseInt(decl.getAttribute(ATTR_Z) || '10', 10),
@@ -570,6 +572,11 @@
   // ── Livewire v4 (Filament v5) ─────────────────────────────────────────────
   document.addEventListener('livewire:navigated', () => requestAnimationFrame(boot));
   document.addEventListener('livewire:update',    () => requestAnimationFrame(boot));
+  document.addEventListener('filament-table-loaded', (event) => {
+    if(window.tableEventSended === true) return;
+    window.tableEventSended = true; // lock repeat event
+    requestAnimationFrame(boot)
+  });
 
   // ── Alpine.js ─────────────────────────────────────────────────────────────
   document.addEventListener('alpine:initialized', boot);

@@ -6,6 +6,7 @@ namespace ZeeshanTariq\FilamentStickyColumns\Concerns;
 
 use Filament\Tables\Columns\Column;
 use ReflectionMethod;
+use ZeeshanTariq\FilamentStickyColumns\Columns\StickyColumn;
 use ZeeshanTariq\FilamentStickyColumns\StickyAttributes;
 
 trait HasStickyColumn
@@ -133,5 +134,13 @@ trait HasStickyColumn
         }
 
         StickyAttributes::applyToColumn($this, $attrs, $supportsMerge);
+    }
+
+    public function seedDeferLoadedEvent(): StickyColumn
+    {
+        return $this
+            ->extraCellAttributes([
+                'x-init' => '$dispatch(\'filament-table-loaded\')',
+            ]);
     }
 }
