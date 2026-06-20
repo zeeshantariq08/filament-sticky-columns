@@ -182,25 +182,51 @@
     return map;
   }
 
+  /**
+   * Logical column span for a cell. Filament summary rows merge the heading
+   * across every column before the first summarizer (colspan > 1).
+   */
+  function getCellColSpan(cell) {
+    const span = cell.colSpan;
+    return span && span > 1 ? span : 1;
+  }
+
+  function applyStickyStyles(cell, config, isHeader) {
+    cell.style.position         = 'sticky';
+    cell.style[config.position] = `${config.offset}px`;
+    // Header cells sit above body cells
+    cell.style.zIndex           = isHeader ? config.zIndex + 10 : config.zIndex;
+    cell.style.backgroundColor  = resolveBackground(cell);
+
+    // Shadow — only when config.shadow is not explicitly disabled
+    const showShadow = cell.closest('table')?.dataset.stickyShadow !== 'false';
+    if (showShadow) {
+      // Shadow is managed by CSS class; inline is just a fallback
+      cell.style.boxShadow = '';
+    }
+
+    cell.setAttribute(APPLIED_ATTR, config.position);
+  }
+
   function applyStickyToRow(cells, stickyMap, isHeader) {
-    cells.forEach((cell, idx) => {
-      const config = stickyMap[idx];
-      if (!config) return;
+    let logicalIdx = 0;
 
-      cell.style.position         = 'sticky';
-      cell.style[config.position] = `${config.offset}px`;
-      // Header cells sit above body cells
-      cell.style.zIndex           = isHeader ? config.zIndex + 10 : config.zIndex;
-      cell.style.backgroundColor  = resolveBackground(cell);
+    cells.forEach((cell) => {
+      const colSpan = getCellColSpan(cell);
 
-      // Shadow — only when config.shadow is not explicitly disabled
-      const showShadow = cell.closest('table')?.dataset.stickyShadow !== 'false';
-      if (showShadow) {
-        // Shadow is managed by CSS class; inline is just a fallback
-        cell.style.boxShadow = '';
+      // Merged cells (e.g. Filament summary headings) cannot be pinned per-column
+      // and would overlap summary values when scrolled horizontally.
+      if (colSpan > 1) {
+        logicalIdx += colSpan;
+        return;
       }
 
-      cell.setAttribute(APPLIED_ATTR, config.position);
+      const config = stickyMap[logicalIdx];
+      if (config) {
+        applyStickyStyles(cell, config, isHeader);
+      }
+
+      logicalIdx += colSpan;
     });
   }
 
